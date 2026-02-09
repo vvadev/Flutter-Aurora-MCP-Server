@@ -1,0 +1,17 @@
+services:
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    command: npm run dev
+    environment:
+      - PORT=${PORT:-3000}
+      - LOG_LEVEL=debug
+    volumes:
+      - ./src:/app/src
+      - ./package.json:/app/package.json
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./docs:/app/docs:ro
+    ports:
+      - "${PORT:-3000}:${PORT:-3000}"
