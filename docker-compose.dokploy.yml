@@ -1,0 +1,61 @@
+services:
+  # Main MCP Server
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flutter-aurora-mcp-server
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:${PORT:-3000}"
+    environment:
+      - PORT=${PORT:-3000}
+      - HOST=0.0.0.0
+      - DOCS_PATH=/app/docs
+      - RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS:-60000}
+      - RATE_LIMIT_MAX=${RATE_LIMIT_MAX:-60}
+      - SESSION_TTL_MS=${SESSION_TTL_MS:-3600000}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ENABLE_RAG=${ENABLE_RAG:-false}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
+      - OPENAI_EMBEDDING_MODEL=${OPENAI_EMBEDDING_MODEL:-openai/text-embedding-3-small}
+      - EMBEDDING_CHUNK_SIZE=${EMBEDDING_CHUNK_SIZE:-500}
+      - EMBEDDING_CHUNK_OVERLAP=${EMBEDDING_CHUNK_OVERLAP:-50}
+      - RAG_TOP_K_RESULTS=${RAG_TOP_K_RESULTS:-10}
+      - RAG_HYBRID_ALPHA=${RAG_HYBRID_ALPHA:-50}
+      - REDIS_URL=redis://redis:6379
+      - ENABLE_RAG_CACHE=${ENABLE_RAG_CACHE:-true}
+    volumes:
+      - ./docs:/app/docs:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - dokploy-network
+      - default
+
+  # Redis (for RAG embeddings cache)
+  redis:
+    image: redis:7-alpine
+    container_name: flutter-aurora-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command: redis-server --appendonly yes
+    networks:
+      - default
+
+networks:
+  dokploy-network:
+    external: true
+
+volumes:
+  redis-data:
+    driver: local
